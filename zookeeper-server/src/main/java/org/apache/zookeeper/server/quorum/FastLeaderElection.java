@@ -468,6 +468,7 @@ public class FastLeaderElection implements Election {
             public void run() {
                 while (!stop) {
                     try {
+
                         ToSend m = sendqueue.poll(3000, TimeUnit.MILLISECONDS);
                         if(m == null) continue;
 
@@ -674,14 +675,16 @@ public class FastLeaderElection implements Election {
      * Send notifications to all peers upon a change in our vote
      */
     private void sendNotifications() {
+        //拿到所有参与投票的结点
         for (long sid : self.getCurrentAndNextConfigVoters()) {
             QuorumVerifier qv = self.getQuorumVerifier();
+            //组织消息
             ToSend notmsg = new ToSend(ToSend.mType.notification,
                     proposedLeader,
                     proposedZxid,
-                    logicalclock.get(),
+                    logicalclock.get(), //选举周期？
                     QuorumPeer.ServerState.LOOKING,
-                    sid,
+                    sid, //目标机器的id
                     proposedEpoch, qv.toString().getBytes());
             if(LOG.isDebugEnabled()){
                 LOG.debug("Sending Notification: " + proposedLeader + " (n.leader), 0x"  +
@@ -689,6 +692,7 @@ public class FastLeaderElection implements Election {
                       " (n.round), " + sid + " (recipient), " + self.getId() +
                       " (myid), 0x" + Long.toHexString(proposedEpoch) + " (n.peerEpoch)");
             }
+            //把消息放到之前准备好的发送队列里面去
             sendqueue.offer(notmsg);
         }
     }
@@ -838,6 +842,7 @@ public class FastLeaderElection implements Election {
      * @return long
      */
     private long getInitId(){
+        //返回可以投票的结点的集合，如果是非Observer结点，就返回自己
         if(self.getQuorumVerifier().getVotingMembers().containsKey(self.getId()))       
             return self.getId();
         else return Long.MIN_VALUE;
@@ -896,12 +901,14 @@ public class FastLeaderElection implements Election {
             int notTimeout = finalizeWait;
 
             synchronized(this){
-                logicalclock.incrementAndGet();
+                logicalclock.incrementAndGet(); //选举id？
+                //准备选票的信息，从里面可以看出，初始时都是先投自己
                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
             }
 
             LOG.info("New election. My id =  " + self.getId() +
                     ", proposed zxid=0x" + Long.toHexString(proposedZxid));
+            //******消息放到队列里面，由之前设置的线程读取并发送
             sendNotifications();
 
             /*
@@ -914,6 +921,7 @@ public class FastLeaderElection implements Election {
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
                  */
+                //拿到其他机器发送过来的选票
                 Notification n = recvqueue.poll(notTimeout,
                         TimeUnit.MILLISECONDS);
 
@@ -925,6 +933,7 @@ public class FastLeaderElection implements Election {
                     if(manager.haveDelivered()){
                         sendNotifications();
                     } else {
+                        //尝试与其他所有的结点在选票端口进行连接 
                         manager.connectAll();
                     }
 

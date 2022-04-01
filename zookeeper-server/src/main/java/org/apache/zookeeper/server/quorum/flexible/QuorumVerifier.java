@@ -36,6 +36,7 @@ public interface QuorumVerifier {
     long getVersion();
     void setVersion(long ver);
     Map<Long, QuorumServer> getAllMembers();
+    //observer不参与投票
     Map<Long, QuorumServer> getVotingMembers();
     Map<Long, QuorumServer> getObservingMembers();
     boolean equals(Object o);

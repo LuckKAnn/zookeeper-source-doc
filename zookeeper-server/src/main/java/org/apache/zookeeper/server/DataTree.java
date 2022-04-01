@@ -230,6 +230,7 @@ public class DataTree {
 
         /** add the proc node and quota node */
         root.addChild(procChildZookeeper);
+        //写入默认的/zookeeper结点
         nodes.put(procZookeeper, procDataNode);
 
         procDataNode.addChild(quotaChildZookeeper);

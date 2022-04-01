@@ -127,6 +127,8 @@ public abstract class ServerCnxnFactory {
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
         if (serverCnxnFactoryName == null) {
+            //默认采用的客户端服务端通讯方式是基于NIO的
+            //如果想要基于Netty完成，需要增加参数配置ZOOKEEPER_SERVER_CNXN_FACTORY
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {

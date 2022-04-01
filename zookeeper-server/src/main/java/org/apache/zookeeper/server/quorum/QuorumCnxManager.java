@@ -912,6 +912,8 @@ public class QuorumCnxManager {
                         LOG.info("Creating TLS-only quorum server socket");
                         ss = new UnifiedServerSocket(self.getX509Util(), false);
                     } else {
+                        //开放选举端口的监听，是集群内配置好的
+                        //这里用的原生的Socket，那么就应该是BIO
                         ss = new ServerSocket();
                     }
 
@@ -924,6 +926,7 @@ public class QuorumCnxManager {
                         // Resolve hostname for this server in case the
                         // underlying ip address has changed.
                         self.recreateSocketAddresses(self.getId());
+                        //获取选举的端口号
                         addr = self.getElectionAddress();
                     }
                     LOG.info("{} is accepting connections now, my election bind port: {}", QuorumCnxManager.this.mySid, addr.toString());
@@ -931,6 +934,7 @@ public class QuorumCnxManager {
                     ss.bind(addr);
                     while (!shutdown) {
                         try {
+                            //阻塞等待获取选票
                             client = ss.accept();
                             setSockOpts(client);
                             LOG.info("Received connection request from {}", client.getRemoteSocketAddress());

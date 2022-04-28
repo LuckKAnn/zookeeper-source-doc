@@ -74,6 +74,7 @@ public class Follower extends Learner{
         try {
             QuorumServer leaderServer = findLeader();            
             try {
+                //建立BIO链接
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
                 if (self.isReconfigStateChange())
@@ -86,13 +87,16 @@ public class Follower extends Learner{
                             + " is less than our accepted epoch " + ZxidUtils.zxidToString(self.getAcceptedEpoch()));
                     throw new IOException("Error: Epoch of leader is lower");
                 }
+                //进行主从数据的同步
                 syncWithLeader(newEpochZxid);                
                 QuorumPacket qp = new QuorumPacket();
+                //死循环接收数据包
                 while (this.isRunning()) {
                     readPacket(qp);
                     processPacket(qp);
                 }
             } catch (Exception e) {
+                //
                 LOG.warn("Exception when following the leader", e);
                 try {
                     sock.close();
@@ -110,6 +114,7 @@ public class Follower extends Learner{
 
     /**
      * Examine the packet received in qp and dispatch based on its contents.
+     * 根据不同类型处理不同的数据包
      * @param qp
      * @throws IOException
      */
@@ -134,7 +139,7 @@ public class Follower extends Learner{
                QuorumVerifier qv = self.configFromString(new String(setDataTxn.getData()));
                self.setLastSeenQuorumVerifier(qv, true);                               
             }
-            
+            //2.1写本地数据文件
             fzk.logRequest(hdr, txn);
             break;
         case Leader.COMMIT:

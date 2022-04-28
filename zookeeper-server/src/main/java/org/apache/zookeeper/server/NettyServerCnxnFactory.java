@@ -259,6 +259,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("New message {} from {}", msg, ctx.channel());
                     }
+
                     NettyServerCnxn cnxn = ctx.channel().attr(CONNECTION_ATTRIBUTE).get();
                     if (cnxn == null) {
                         LOG.error("channelRead() on a closed or closing NettyServerCnxn");

@@ -391,6 +391,7 @@ public class Leader {
                     Socket s = null;
                     boolean error = false;
                     try {
+                        //监听数据同步通道
                         s = ss.accept();
 
                         // start with the initLimit, once the ack is processed
@@ -476,6 +477,7 @@ public class Leader {
 
             // Start thread that waits for connection requests from
             // new followers.
+            //开启线程，准备数据同步的监听
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
@@ -654,6 +656,7 @@ public class Leader {
                     }
                     tickSkip = !tickSkip;
                 }
+                //发送ping保持心跳
                 for (LearnerHandler f : getLearners()) {
                     f.ping();
                 }
@@ -821,9 +824,13 @@ public class Leader {
             informAndActivate(p, designatedLeader);
             //turnOffFollowers();
         } else {
+            //3.3commmit的步骤
+            //发送commit给follower
             commit(zxid);
+            //发送数据给Observer
             inform(p);
         }
+        //自己的commit，
         zk.commitProcessor.commit(p.request);
         if(pendingSyncs.containsKey(zxid)){
             for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
@@ -891,7 +898,7 @@ public class Leader {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
         }*/
-        
+        //判断选票是否过半了
         boolean hasCommitted = tryToCommit(p, zxid, followerAddr);
 
         // If p is a reconfiguration, multiple other operations may be ready to be committed,
@@ -987,6 +994,7 @@ public class Leader {
     void sendPacket(QuorumPacket qp) {
         synchronized (forwardingFollowers) {
             for (LearnerHandler f : forwardingFollowers) {
+                //又是通过队列实现异步的发送
                 f.queuePacket(qp);
             }
         }
@@ -1012,6 +1020,7 @@ public class Leader {
         synchronized(this){
             lastCommitted = zxid;
         }
+        //构建Commit发送给其他的Follower
         QuorumPacket qp = new QuorumPacket(Leader.COMMIT, zxid, null, null);
         sendPacket(qp);
     }
@@ -1034,6 +1043,7 @@ public class Leader {
      * Create an inform packet and send it to all observers.
      */
     public void inform(Proposal proposal) {
+        //这里把数据也发送给了Observer
         QuorumPacket qp = new QuorumPacket(Leader.INFORM, proposal.request.zxid,
                                             proposal.packet.getData(), null);
         sendObserverPacket(qp);
@@ -1093,12 +1103,14 @@ public class Leader {
 
         byte[] data = SerializeUtils.serializeRequest(request);
         proposalStats.setLastBufferSize(data.length);
+        //构造proposal的数据包
+
         QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
 
         Proposal p = new Proposal();
         p.packet = pp;
         p.request = request;                
-        
+        //接下来发送proposal数据包
         synchronized(this) {
            p.addQuorumVerifier(self.getQuorumVerifier());
                    
@@ -1116,6 +1128,7 @@ public class Leader {
 
             lastProposed = p.packet.getZxid();
             outstandingProposals.put(lastProposed, p);
+            //给所有的follower发送数据
             sendPacket(pp);
         }
         return p;

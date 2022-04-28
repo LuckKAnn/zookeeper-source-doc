@@ -155,6 +155,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements
 
     @Override
     public void run() {
+        //本身线程所执行的逻辑就是轮询获取队列中的消息
         Request request;
         try {
             while (!stopped) {
@@ -163,6 +164,8 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements
                         !stopped &&
                         ((queuedRequests.isEmpty() || isWaitingForCommit() || isProcessingCommit()) &&
                          (committedRequests.isEmpty() || isProcessingRequest()))) {
+                        //早期这个线程就已经运行了，但是wait住了还无法进行commit
+                        //之后被唤醒
                         wait();
                     }
                 }
@@ -329,6 +332,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements
         if (LOG.isDebugEnabled()) {
             LOG.debug("Committing request:: " + request);
         }
+        //放入一个队列
         committedRequests.add(request);
         if (!isProcessingCommit()) {
             wakeup();

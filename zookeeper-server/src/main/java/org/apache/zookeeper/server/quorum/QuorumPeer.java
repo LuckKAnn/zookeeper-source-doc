@@ -1228,6 +1228,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                                 shuttingDownLE = false;
                                 startLeaderElection();
                             }
+                            //选举完成状态改变
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
@@ -1269,6 +1270,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case FOLLOWING:
                     try {
                        LOG.info("FOLLOWING");
+                        //TODO
                         setFollower(makeFollower(logFactory));
                         follower.followLeader();
                     } catch (Exception e) {
@@ -1276,13 +1278,17 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     } finally {
                        follower.shutdown();
                        setFollower(null);
+                       //如果内部出错，更新状态为looking
+
                        updateServerState();
                     }
                     break;
                 case LEADING:
                     LOG.info("LEADING");
                     try {
+                        //这一步会创建一个针对数据同步端口的serversocket
                         setLeader(makeLeader(logFactory));
+                        //发挥leader作用，包括监听端口、发送ping保持心跳
                         leader.lead();
                         setLeader(null);
                     } catch (Exception e) {

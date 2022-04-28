@@ -71,6 +71,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        //读写的处理
         if (sockKey.isReadable()) {
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
@@ -98,6 +99,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;
                 } else {
+                    //处理回复的消息
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -106,6 +108,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
         if (sockKey.isWritable()) {
+            /**
+             * 这里的逻辑是先由空的写数据包唤醒，然后再去之前的outgoingQueue里面拿到真正要发送的书籍
+             * 为什么要这么设计????是一种异步的设计
+             */
             Packet p = findSendablePacket(outgoingQueue,
                     sendThread.tunnelAuthInProgress());
 
@@ -118,8 +124,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                             (p.requestHeader.getType() != OpCode.auth)) {
                         p.requestHeader.setXid(cnxn.getXid());
                     }
+                    //通过一些序列化机制生成bytebuffer
                     p.createBB();
                 }
+                //发送序列化之后的数据
                 sock.write(p.bb);
                 if (!p.bb.hasRemaining()) {
                     sentCount.getAndIncrement();
@@ -271,6 +279,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      */
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) 
     throws IOException {
+        //客户端向服务器注册Connect事件
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
         boolean immediateConnect = sock.connect(addr);
         if (immediateConnect) {
@@ -336,6 +345,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     private synchronized void wakeupCnxn() {
+        //OS的实现，通过发送一个空的数据包，唤醒阻塞在selector上的线程
         selector.wakeup();
     }
     
@@ -351,6 +361,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         // non blocking, so time is effectively a constant. That is
         // Why we just have to do this once, here
         updateNow();
+        //NIO的处理流程
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
@@ -360,6 +371,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                //
                 doIO(pendingQueue, cnxn);
             }
         }

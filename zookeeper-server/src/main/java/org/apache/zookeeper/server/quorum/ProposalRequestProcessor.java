@@ -43,6 +43,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
             RequestProcessor nextProcessor) {
         this.zks = zks;
         this.nextProcessor = nextProcessor;
+
         AckRequestProcessor ackProcessor = new AckRequestProcessor(zks.getLeader());
         syncProcessor = new SyncRequestProcessor(zks, ackProcessor);
     }
@@ -75,10 +76,14 @@ public class ProposalRequestProcessor implements RequestProcessor {
             if (request.getHdr() != null) {
                 // We need to sync and get consensus on any transactions
                 try {
+                    //将proposal发送到队列当中去，等待异步发送
                     zks.getLeader().propose(request);
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }
+                //syncProcessor
+                //印证了流程图，先发送proposal，之后需要写本地数据文件
+                //在zookeeper内部，实际上是先写文件，之后的commit是完成内存写
                 syncProcessor.processRequest(request);
             }
         }

@@ -131,6 +131,7 @@ public class QuorumMaj implements QuorumVerifier {
      * from votingMembers
      */
     public boolean containsQuorum(Set<Long> ackSet) {
+        //过半的逻辑
         return (ackSet.size() > half);
     }
 

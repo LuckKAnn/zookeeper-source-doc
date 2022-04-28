@@ -36,6 +36,7 @@ public class SyncedLearnerTracker {
     public boolean addAck(Long sid) {
         boolean change = false;
         for (QuorumVerifierAcksetPair qvAckset : qvAcksetPairs) {
+            //ACK暂存的集合
             if (qvAckset.getQuorumVerifier().getVotingMembers().containsKey(sid)) {
                 qvAckset.getAckset().add(sid);
                 change = true;
@@ -46,6 +47,7 @@ public class SyncedLearnerTracker {
 
     public boolean hasAllQuorums() {
         for (QuorumVerifierAcksetPair qvAckset : qvAcksetPairs) {
+            //过半的逻辑
             if (!qvAckset.getQuorumVerifier().containsQuorum(qvAckset.getAckset()))
                 return false;
         }

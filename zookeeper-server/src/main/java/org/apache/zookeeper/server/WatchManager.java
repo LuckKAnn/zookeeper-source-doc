@@ -99,6 +99,8 @@ class WatchManager {
                 KeeperState.SyncConnected, path);
         HashSet<Watcher> watchers;
         synchronized (this) {
+            //这里因为用了remove，所以原生的watch是一次性的
+            //是根据路径去拿的
             watchers = watchTable.remove(path);
             if (watchers == null || watchers.isEmpty()) {
                 if (LOG.isTraceEnabled()) {

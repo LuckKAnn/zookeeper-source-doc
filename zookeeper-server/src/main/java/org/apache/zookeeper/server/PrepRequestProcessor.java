@@ -131,6 +131,10 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
     public void run() {
         try {
             while (true) {
+                //把之前放入到阻塞对垒的request再拿出来(主线程放入的)
+                //单独的线程处理
+                //所以消息到来之后都存储在阻塞队列当中，按照FIFO的顺序执行
+                //先执行的话就拥有较小的zxid
                 Request request = submittedRequests.take();
                 long traceMask = ZooTrace.CLIENT_REQUEST_TRACE_MASK;
                 if (request.type == OpCode.ping) {
@@ -736,11 +740,14 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         request.setTxn(null);
 
         try {
+            //判断请求的类型
+            //匹配zk里面的命令
             switch (request.type) {
             case OpCode.createContainer:
             case OpCode.create:
             case OpCode.create2:
                 CreateRequest create2Request = new CreateRequest();
+                //涉及到zxid
                 pRequest2Txn(request.type, zks.getNextZxid(), request, create2Request, true);
                 break;
             case OpCode.createTTL:

@@ -156,6 +156,7 @@ public class NettyServerCnxn extends ServerCnxn {
         WatcherEvent e = event.getWrapper();
 
         try {
+            //把监听事件的变动发送回去
             sendResponse(h, e, "notification");
         } catch (IOException e1) {
             if (LOG.isDebugEnabled()) {
@@ -198,6 +199,7 @@ public class NettyServerCnxn extends ServerCnxn {
             close();
             return;
         }
+        //返回数据给客户端
         channel.writeAndFlush(Unpooled.wrappedBuffer(sendBuffer)).addListener(onSendBufferDoneListener);
     }
 
@@ -506,6 +508,7 @@ public class NettyServerCnxn extends ServerCnxn {
                     if (message.readableBytes() < bbLen.remaining()) {
                         bbLen.limit(bbLen.position() + message.readableBytes());
                     }
+                    //传过来的数据绑定到服务端
                     message.readBytes(bbLen);
                     bbLen.limit(bbLen.capacity());
                     if (bbLen.remaining() == 0) {

@@ -260,6 +260,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logQuorumPacket(LOG, traceMask, 'o', p);
                 }
+                //先序列化，再发送数据
                 oa.writeRecord(p, "packet");
             } catch (IOException e) {
                 if (!sock.isClosed()) {
@@ -494,6 +495,7 @@ public class LearnerHandler extends ZooKeeperThread {
             bufferedOutput.flush();
 
             // Start thread that blast packets in the queue to learner
+            //之前的数据包都存在了队列里面，这里就需要取出来进行发送
             startSendingPackets();
             
             /*
@@ -561,6 +563,7 @@ public class LearnerHandler extends ZooKeeperThread {
                         }
                     }
                     syncLimitCheck.updateAck(qp.getZxid());
+                    //收到的是ACK的处理
                     leader.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());
                     break;
                 case Leader.PING:
@@ -956,6 +959,7 @@ public class LearnerHandler extends ZooKeeperThread {
             synchronized(leader) {
                 id = leader.lastProposed;
             }
+            //ping的数据包
             QuorumPacket ping = new QuorumPacket(Leader.PING, id, null, null);
             queuePacket(ping);
         } else {

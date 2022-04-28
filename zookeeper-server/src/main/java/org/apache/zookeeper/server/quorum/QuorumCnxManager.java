@@ -515,10 +515,12 @@ public class QuorumCnxManager {
     public void receiveConnection(final Socket sock) {
         DataInputStream din = null;
         try {
+            //输入流信息
             din = new DataInputStream(
                     new BufferedInputStream(sock.getInputStream()));
 
             LOG.debug("Sync handling of connection request received from: {}", sock.getRemoteSocketAddress());
+            //处理消息
             handleConnection(sock, din);
         } catch (IOException e) {
             LOG.error("Exception handling connection, addr: {}, closing server connection",
@@ -574,6 +576,7 @@ public class QuorumCnxManager {
             } else {
                 try {
                     InitialMessage init = InitialMessage.parse(protocolVersion, din);
+                    //拿到sid了
                     sid = init.sid;
                     electionAddr = init.electionAddr;
                 } catch (InitialMessage.InitialMessageException ex) {
@@ -600,6 +603,11 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
+        /**
+         * 由于socket是全双工的通信，为了保证通信线路的唯一性
+         * 这里zk的设计是保证只有从mymid大的连接向myid小的
+         * TODO:这里到底是大的连接小的还是小的连接大的
+         */
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -636,7 +644,7 @@ public class QuorumCnxManager {
             if (vsw != null) {
                 vsw.finish();
             }
-
+            //创建一些收发线程，并将其与sid进行对应存储
             senderWorkerMap.put(sid, sw);
 
             queueSendMap.putIfAbsent(sid,
@@ -655,6 +663,7 @@ public class QuorumCnxManager {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
          */
+        //会给自己和其他人都发，是根据配置文件的
         if (this.mySid == sid) {
              b.position(0);
              addToRecvQueue(new Message(b.duplicate(), sid));
@@ -667,6 +676,7 @@ public class QuorumCnxManager {
               */
              ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(
                 SEND_CAPACITY);
+             //放入之前已经为其他机器准备好的一个队列，等到SendWorker读取并用dout 发送
              ArrayBlockingQueue<ByteBuffer> oldq = queueSendMap.putIfAbsent(sid, bq);
              if (oldq != null) {
                  addToSendQueue(oldq, b);
@@ -946,6 +956,7 @@ public class QuorumCnxManager {
                             if (quorumSaslAuthEnabled) {
                                 receiveConnectionAsync(client);
                             } else {
+                                //处理连接
                                 receiveConnection(client);
                             }
                             numRetries = 0;
@@ -1123,6 +1134,7 @@ public class QuorumCnxManager {
                  * message than that stored in lastMessage. To avoid sending
                  * stale message, we should send the message in the send queue.
                  */
+                //拿到启动之前准备的队列
                 ArrayBlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);
                 if (bq == null || isSendQueueEmpty(bq)) {
                    ByteBuffer b = lastMessageSent.get(sid);
@@ -1236,9 +1248,11 @@ public class QuorumCnxManager {
                     /**
                      * Allocates a new ByteBuffer to receive the message
                      */
+                    //读取信息放入队列
                     byte[] msgArray = new byte[length];
                     din.readFully(msgArray, 0, length);
                     ByteBuffer message = ByteBuffer.wrap(msgArray);
+                    //
                     addToRecvQueue(new Message(message.duplicate(), sid));
                 }
             } catch (Exception e) {
@@ -1344,6 +1358,7 @@ public class QuorumCnxManager {
                 }
             }
             try {
+                //recvQueue
                 recvQueue.add(msg);
             } catch (IllegalStateException ie) {
                 // This should never happen

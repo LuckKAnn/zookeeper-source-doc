@@ -873,11 +873,12 @@ public class ZooKeeper implements AutoCloseable {
         }
         this.clientConfig = clientConfig;
         watchManager = defaultWatchManager();
+        //存储watcher
         watchManager.defaultWatcher = watcher;
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
         hostProvider = aHostProvider;
-
+        //创建连接，赋值一些属性
         cnxn = createConnection(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
@@ -1526,13 +1527,16 @@ public class ZooKeeper implements AutoCloseable {
         h.setType(createMode.isContainer() ? ZooDefs.OpCode.createContainer : ZooDefs.OpCode.create);
         CreateRequest request = new CreateRequest();
         CreateResponse response = new CreateResponse();
+        //将data封装进request里
         request.setData(data);
         request.setFlags(createMode.toFlag());
+        //封装路径
         request.setPath(serverPath);
         if (acl != null && acl.size() == 0) {
             throw new KeeperException.InvalidACLException();
         }
         request.setAcl(acl);
+        //传输request？
         ReplyHeader r = cnxn.submitRequest(h, request, response, null);
         if (r.getErr() != 0) {
             throw KeeperException.create(KeeperException.Code.get(r.getErr()),

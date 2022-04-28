@@ -63,17 +63,21 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
 
     @Override
     protected void setupRequestProcessors() {
+        //构造责任链条
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
+        //通过组合的方式构造出责任链条
         RequestProcessor toBeAppliedProcessor = new Leader.ToBeAppliedRequestProcessor(finalProcessor, getLeader());
         commitProcessor = new CommitProcessor(toBeAppliedProcessor,
                 Long.toString(getServerId()), false,
                 getZooKeeperServerListener());
         commitProcessor.start();
+        //proposalRequestProcessor还会初始化额外的两个Processor
         ProposalRequestProcessor proposalProcessor = new ProposalRequestProcessor(this,
                 commitProcessor);
         proposalProcessor.initialize();
         prepRequestProcessor = new PrepRequestProcessor(this, proposalProcessor);
         prepRequestProcessor.start();
+        //所以最先的责任链条是LeaderRequestProcessor
         firstProcessor = new LeaderRequestProcessor(this, prepRequestProcessor);
 
         setupContainerManager();

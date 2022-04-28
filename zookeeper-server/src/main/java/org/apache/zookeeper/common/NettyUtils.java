@@ -100,8 +100,10 @@ public class NettyUtils {
      */
     public static Class<? extends ServerSocketChannel> nioOrEpollServerSocketChannel() {
         if (Epoll.isAvailable()) {
+            //这个直接用了JDK底层的epoll函数
             return EpollServerSocketChannel.class;
         } else {
+            //这个还做了一些封装，如果支持epoll就是epoll，如果不是的话就是select/poll模型
             return NioServerSocketChannel.class;
         }
     }

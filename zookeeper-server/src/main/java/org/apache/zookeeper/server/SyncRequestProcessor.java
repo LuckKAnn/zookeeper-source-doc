@@ -117,6 +117,9 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
                 if (si == requestOfDeath) {
                     break;
                 }
+                /**
+                 * 这一段总体来说就是日志刷盘，记录到本地
+                 */
                 if (si != null) {
                     // track the number of records written to the log
                     if (zks.getZKDatabase().append(si)) {
@@ -179,6 +182,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
         while (!toFlush.isEmpty()) {
             Request i = toFlush.remove();
             if (nextProcessor != null) {
+                //ACKRequestProcessor
                 nextProcessor.processRequest(i);
             }
         }
@@ -211,6 +215,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
 
     public void processRequest(Request request) {
         // request.addRQRec(">sync");
+        //放到队列里面，而它本身是一个线程，在Run方法里面有处理
         queuedRequests.add(request);
     }
 

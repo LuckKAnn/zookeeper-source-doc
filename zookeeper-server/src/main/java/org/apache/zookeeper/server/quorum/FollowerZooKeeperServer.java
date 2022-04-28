@@ -67,12 +67,14 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
 
     @Override
     protected void setupRequestProcessors() {
+        //构建Follower自己的处理器链路
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         commitProcessor = new CommitProcessor(finalProcessor,
                 Long.toString(getServerId()), true, getZooKeeperServerListener());
         commitProcessor.start();
         firstProcessor = new FollowerRequestProcessor(this, commitProcessor);
         ((FollowerRequestProcessor) firstProcessor).start();
+        //内部有SendAckRequestProcessor处理器，日志写完之后发送ACK
         syncProcessor = new SyncRequestProcessor(this,
                 new SendAckRequestProcessor((Learner)getFollower()));
         syncProcessor.start();
@@ -85,6 +87,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
         if ((request.zxid & 0xffffffffL) != 0) {
             pendingTxns.add(request);
         }
+        //也是利用syncProcessor进行日志写
         syncProcessor.processRequest(request);
     }
 

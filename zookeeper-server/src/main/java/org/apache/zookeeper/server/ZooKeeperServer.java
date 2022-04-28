@@ -100,6 +100,9 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     protected SessionTracker sessionTracker;
     private FileTxnSnapLog txnLogFactory = null;
     private ZKDatabase zkDb;
+
+    //zxid，原子类型
+    //64位，高32位是LeaderID，选举周期，低32位才是事务id
     private final AtomicLong hzxid = new AtomicLong(0);
     public final static Exception ok = new Exception("No prob");
     protected RequestProcessor firstProcessor;
@@ -360,6 +363,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
     
     long getNextZxid() {
+        //原子自增
         return hzxid.incrementAndGet();
     }
 
@@ -814,6 +818,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             touch(si.cnxn);
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
+                //责任链处理
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
@@ -1084,6 +1089,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     public void processPacket(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
         // We have the request, now process and setup for next
         InputStream bais = new ByteBufferInputStream(incomingBuffer);
+        //jute序列化
         BinaryInputArchive bia = BinaryInputArchive.getArchive(bais);
         RequestHeader h = new RequestHeader();
         h.deserialize(bia, "header");
@@ -1145,6 +1151,14 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 // Always treat packet from the client as a possible
                 // local request.
                 setLocalSessionFlag(si);
+
+                //------------------新增:打印验证收到的消息
+                byte[]bytes = new byte[si.request.remaining()];
+                si.request.get(bytes);
+                LOG.info("收到的消息:"+new String(bytes));
+                //------------------
+
+
                 submitRequest(si);
             }
         }
@@ -1213,6 +1227,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         int opCode = request != null ? request.type : hdr.getType();
         long sessionId = request != null ? request.sessionId : hdr.getClientId();
         if (hdr != null) {
+            //应用到zk的数据结构，dataTree树内部
+            //是否还应该触发监听器
             rc = getZKDatabase().processTxn(hdr, txn);
         } else {
             rc = new ProcessTxnResult();

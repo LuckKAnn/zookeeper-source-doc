@@ -509,6 +509,7 @@ public class DataTree {
             updateCount(lastPrefix, 1);
             updateBytes(lastPrefix, data == null ? 0 : data.length);
         }
+        //触发事件
         dataWatches.triggerWatch(path, Event.EventType.NodeCreated);
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
                 Event.EventType.NodeChildrenChanged);
@@ -805,6 +806,7 @@ public class DataTree {
                 case OpCode.create:
                     CreateTxn createTxn = (CreateTxn) txn;
                     rc.path = createTxn.getPath();
+                    //会触发一些事件
                     createNode(
                             createTxn.getPath(),
                             createTxn.getData(),

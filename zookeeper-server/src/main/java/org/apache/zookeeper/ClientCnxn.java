@@ -532,6 +532,7 @@ public class ClientCnxn {
                   WatcherSetEventPair pair = (WatcherSetEventPair) event;
                   for (Watcher watcher : pair.watchers) {
                       try {
+                          //调用watcher的process方法，这个process是实现了Watcher接口的类重写的方法
                           watcher.process(pair.event);
                       } catch (Throwable t) {
                           LOG.error("Error while calling watcher ", t);
@@ -863,6 +864,9 @@ public class ClientCnxn {
                     }
                 }
 
+
+                //这里就是对数据结点变动的先入队再处理
+                //处理监听事件
                 WatchedEvent we = new WatchedEvent(event);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got " + we + " for sessionid 0x"
@@ -924,6 +928,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
             } finally {
+                //
                 finishPacket(packet);
             }
         }
@@ -1099,8 +1104,10 @@ public class ClientCnxn {
                     saslLoginFailed = true;
                 }
             }
+            //连接日志
             logStartConnect(addr);
-
+            //真正进行连接
+            //两种方式NIO和Netty
             clientCnxnSocket.connect(addr);
         }
 
@@ -1136,6 +1143,7 @@ public class ClientCnxn {
                         } else {
                             serverAddress = hostProvider.next(1000);
                         }
+                        //建立链接
                         startConnect(serverAddress);
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
@@ -1517,6 +1525,7 @@ public class ClientCnxn {
             WatchDeregistration watchDeregistration)
             throws InterruptedException {
         ReplyHeader r = new ReplyHeader();
+        //数据包？
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                 null, watchRegistration, watchDeregistration);
         synchronized (packet) {
@@ -1610,6 +1619,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
+                //这里就是把数据包放入到了阻塞队列里面
                 outgoingQueue.add(packet);
             }
         }
